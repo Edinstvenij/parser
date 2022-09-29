@@ -1,0 +1,17 @@
+{
+    "name": "test/test",
+    "autoload": {
+        "psr-4": {
+            "src\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Yura",
+            "email": "yuravigovskij@gmail.com"
+        }
+    ],
+    "require": {
+        "electrolinux/phpquery": "^0.9.6"
+    }
+}
