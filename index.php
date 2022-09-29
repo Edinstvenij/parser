@@ -69,62 +69,92 @@ function vendor($pq)
 
 /**
  *
- * Начало парсера
+ * Главная функция
  *
  */
 
 function pars($url)
 {
-// Каталог (Все товары)
+    $maxProductOnePage = 18; // Сколько товаров с 1-ой странцы забераем (Снизу есть товары не с нашей категории)
+    $indexProduct = 1; // Нужно для счета
+
+    $arrListCards = []; // Инициализируем переменую(Масив) для хранения карточек товара
+
     $result = parser($url);
 
     $pq = phpQuery::newDocument($result);
+    $lastPage = $pq->find('.catalog__products ul li');
+    pq($lastPage)->find(':last')->remove();
+    $lastPage = $lastPage->find(':last')->text();
 
-    $arrLinksCards = [];
-    $listLinks = $pq->find('.product-box__name');
-    foreach ($listLinks as $listLink) {
-        $arrLinksCards[] = pq($listLink)->attr('href');
-    }
+//  Переходим на следущую страницу
+    for ($index = 1, $count = $lastPage; $index < $count; $index++) {
+        if ($index !== 1) {
+            $urlUpdate = $url . '?page=' . $index;
+        } else {
+            $urlUpdate = $url;
+        }
+
+
+// Каталог (Все товары)
+        $result = parser($urlUpdate);
+
+        $pq = phpQuery::newDocument($result);
+
+        $arrLinksCards = [];
+        $listLinks = $pq->find('.product-box__name');
+        foreach ($listLinks as $listLink) {
+            $arrLinksCards[] = pq($listLink)->attr('href');
+        }
 
 
 // Внутри карточки товара (Отдельный отвар)
-    $arrListCards = [];
-    foreach ($arrLinksCards as $card) {
-        $resultCard = parser($card);
 
-        $pq = phpQuery::newDocument($resultCard);
+        foreach ($arrLinksCards as $card) {
+            $resultCard = parser($card);
 
-        $imagesCard = [];
-        $allImagesCard = $pq->find('.fancybox');
-        foreach ($allImagesCard as $img) {
-            if (in_array(pq($img)->attr('href'), $imagesCard)) {
-                continue;
+            $pq = phpQuery::newDocument($resultCard);
+
+            $imagesCard = [];
+            $allImagesCard = $pq->find('.fancybox');
+            foreach ($allImagesCard as $img) {
+                if (in_array(pq($img)->attr('href'), $imagesCard)) {
+                    continue;
+                }
+                $imagesCard[] = pq($img)->attr('href');
             }
-            $imagesCard[] = pq($img)->attr('href');
+
+            $productName = trim($pq->find('h1')->text());
+            $directoryName = str_replace(' ', '_', translit($productName));
+
+            // Собираем инфу о товаре
+            $arrListCards[] = [
+                'mainParams' => [
+                    'url' => $card,
+                    'name' => $productName,
+                    'categoryId' => 1208, // id Категории из XML Хорошопа
+                    'vendorCode' => vendor($pq),
+                    'vendor' => 'Signal', //  Бренд
+                    'price' => ((int)preg_replace('/[^0-9]/', '', $pq->find('.product-section__price-list')->text())) + 300,
+                    'currencyId' => 'UAH',
+                    'description' => trim($pq->find('.product-section__description-text')->html()),
+                ],
+                'images' => $imagesCard,
+                'descList' => descriptions($pq),
+            ];
+            if ($indexProduct == $maxProductOnePage) {
+                $indexProduct = 1;
+                break;
+            }
+            $indexProduct++;
         }
-
-        $productName = trim($pq->find('h1')->text());
-        $directoryName = str_replace(' ', '_', translit($productName));
-
-        // Собираем инфу о товаре
-        $arrListCards[] = [
-            'mainParams' => [
-                'url' => $card,
-                'name' => $productName,
-                'categoryId' => 1208, // id Категории из XML Хорошопа
-                'vendorCode' => vendor($pq),
-                'vendor' => 'Signal', //  Бренд
-                'price' => ((int)preg_replace('/[^0-9]/', '', $pq->find('.product-section__price-list')->text())) + 300,
-                'currencyId' => 'UAH',
-                'description' => trim($pq->find('.product-section__description-text')->html()),
-            ],
-            'images' => $imagesCard,
-            'descList' => descriptions($pq),
-        ];
-//        break;
     }
-
     return $arrListCards;
+}
+$test = pars($url);
+
+foreach ($test as $item) {
+   echo $item['mainParams']['description'] . '<br>'.'<hr>';
 }
 
 // Записываем все товары в файл в формате JSON
@@ -134,36 +164,40 @@ function pars($url)
 
 
 // Получаем данные из записаного файла
-$jsonData = file_get_contents('temp/jsonData.txt');
-$arrDataCards = json_decode($jsonData, true);
-
-
-$dom = new DOMDocument('1.0', 'utf-8');
-$offers = $dom->createElement('offers');
-$dom->appendChild($offers);
-
-foreach ($arrDataCards as $card) {
-    $offer = $dom->createElement('offer');
-    $dom->appendChild($offer);
-    $offer->setAttribute('id', $card['mainParams']['vendorCode']);
-    $offer->setAttribute('group_id', 7458); // 7458 ID table...
-    $offer->setAttribute('available', 'true');
-
-    foreach ($card['mainParams'] as $key => $mainParam) {
-        $params = $dom->createElement($key, $mainParam);
-        $offer->appendChild($params);
-    }
-
-    foreach ($card['images'] as $image) {
-        $params = $dom->createElement("picture", $image);
-        $offer->appendChild($params);
-    }
-
-    foreach ($card['descList'] as $descItem) {
-        $params = $dom->createElement('param', $descItem['value']);
-        $params->setAttribute('name', $descItem['name']);
-        $offer->appendChild($params);
-    }
-}
-$dom->save('offers.xml');
+//$jsonData = file_get_contents('temp/jsonData.txt');
+//$arrDataCards = json_decode($jsonData, true);
+//
+//foreach ($arrDataCards as $item) {
+//    echo $item['mainParams']['name'] . '<br>';
+//}
+//
+//
+//$dom = new DOMDocument('1.0', 'utf-8');
+//$offers = $dom->createElement('offers');
+//$dom->appendChild($offers);
+//
+//foreach ($arrDataCards as $card) {
+//    $offer = $dom->createElement('offer');
+//    $dom->appendChild($offer);
+//    $offer->setAttribute('id', $card['mainParams']['vendorCode']);
+//    $offer->setAttribute('group_id', 7458); // 7458 ID table...
+//    $offer->setAttribute('available', 'true');
+//
+//    foreach ($card['mainParams'] as $key => $mainParam) {
+//        $params = $dom->createElement($key, $mainParam);     //Warning: DOMDocument::createElement(): unterminated entity reference path=1_38_39&amp;product_id=16020 in /home/vagrant/code/parser/index.php on line 183
+//        $offer->appendChild($params);
+//    }
+//
+//    foreach ($card['images'] as $image) {
+//        $params = $dom->createElement("picture", $image);
+//        $offer->appendChild($params);
+//    }
+//
+//    foreach ($card['descList'] as $descItem) {
+//        $params = $dom->createElement('param', $descItem['value']);
+//        $params->setAttribute('name', $descItem['name']);
+//        $offer->appendChild($params);
+//    }
+//}
+//$dom->save('temp/offers.xml');
 
