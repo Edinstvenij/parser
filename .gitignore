@@ -1,4 +1,4 @@
 vendor/*
 temp/*
 .idea
-!vendor/autoload.php
+index.old.php
