@@ -202,8 +202,7 @@ class Parser
                 $urlUpdate = $url;
             }
 
-
-            $pq = $this->curl($url);
+            $pq = $this->curl($urlUpdate);
 
             $arrLinksCards = [];
             $listLinks = $pq->find('.product-box__name');
