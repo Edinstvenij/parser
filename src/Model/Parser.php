@@ -24,24 +24,24 @@ class Parser
         return $this->url = $url;
     }
 
-    public function getUrl(): string                        //  Возвращает значения из переменной url
+    public function getUrl(): string                       //  Возвращает значения из переменной url
     {
         return $this->url;
     }
 
-    public function setPq(string $url): \phpQueryObject     // Устанавливает и возвращает значения в переменную pq
+    public function setPq(string $url): \phpQueryObject    // Устанавливает и возвращает значения в переменную pq
     {
         return $this->pq = $this->curl($url);
 
     }
 
-    public function getPq(): \phpQueryObject                //  Возвращает значения из переменной url
+    public function getPq(): \phpQueryObject              //  Возвращает значения из переменной url
     {
         return $this->pq;
     }
 
 
-    public function curl($url): \phpQueryObject              // Возвращает DOM документа (Переход по ссылки)
+    public function curl($url): \phpQueryObject            // Возвращает DOM документа (Переход по ссылки)
     {
         $ch = curl_init($url);
 
@@ -53,7 +53,7 @@ class Parser
         return phpQuery::newDocument($result);
     }
 
-    public function translit(string $string): string         // Возвращает строку с латинскими символами вместо кирилици
+    public function translit(string $string): string       // Возвращает строку с латинскими символами вместо кирилици
     {
         $string = (string)$string; // Преобразуем в строковое значение
         $string = trim($string); // Убираем пробелы в начале и конце строки
@@ -62,46 +62,7 @@ class Parser
         return $string; // Возвращаем результат
     }
 
-    public function descriptions(): array                   // Возвращает массив, все характеристики с карточки товара
-    {
-
-        $allDescCardRu = $this->getPq()->find('.product-section__specifications-list:first')->find('.product-section__specifications-row');
-
-//        $urlProductUa = parse_url($this->getUrl());
-//        $urlProductUa['scheme'] .= '://';
-//        $urlProductUa['host'] .= '/ua';
-//        $urlProductUa = implode('', $urlProductUa);
-//        $allDescCardUa = $this->setPq($urlProductUa)->find('.product-section__specifications-list:first')->find('.product-section__specifications-row');
-
-        $descCard = [];
-
-        $index = 0;
-        foreach ($allDescCardRu as $desc) {
-
-            $descCard[$index]['ru'] = [
-                'name' => pq($desc)->find('.product-section__specifications-title')->text(),
-                'value' => pq($desc)->find('.product-section__specifications-descr')->text()
-            ];
-            $descCard[$index]['ua'] = [
-                'name' => pq($desc)->find('.product-section__specifications-title')->text(),
-                'value' => pq($desc)->find('.product-section__specifications-descr')->text()
-            ];
-            $index++;
-        }
-
-//        $index = 0;
-//        foreach ($allDescCardUa as $desc) {
-//            $descCard[$index]['ua'] = [
-//                'name' => pq($desc)->find('.product-section__specifications-title')->text(),
-//                'value' => pq($desc)->find('.product-section__specifications-descr')->text()
-//            ];
-//            $index++;
-//        }
-
-        return $descCard;
-    }
-
-    public function translationUa(): string                 // Возвращает ссылку на товар с Украинской локализацией
+    public function urlProductUa(): string                 // Возвращает ссылку на товар с Украинской локализацией
     {
         $urlProductUa = parse_url($this->getUrl());
         $urlProductUa['scheme'] .= '://';
@@ -109,21 +70,22 @@ class Parser
         return implode('', $urlProductUa);
     }
 
-    public function productName(): array                    // Возвращает массив с названием товара на двух языках
+
+    public function productName(): array                   // Возвращает массив с названием товара на двух языках
     {
         $productName = [];
         $productName['ru'] = trim($this->getPq()->find('h1.pagetitle')->text());
 
-        $productName['ua'] = trim($this->curl($this->translationUa())->find('h1.pagetitle')->text());
+        $productName['ua'] = trim($this->curl($this->urlProductUa())->find('h1.pagetitle')->text());
         if (empty($productName['ua'])) {
             $productName['ua'] = trim($this->getPq()->find('h1.pagetitle')->text());
         }
         return $productName;
     }
 
-    public function vendorCode(): string                    // Возвращает Артикул (VendorCode)
+    public function vendorCode(): string                   // Возвращает Артикул (VendorCode)
     {
-        foreach ($this->descriptions() as $descItem) {
+        foreach ($this->characteristics() as $descItem) {
 
             if (in_array('Артикул', $descItem['ru'])) {
                 return $descItem['ru']['value'];
@@ -135,6 +97,26 @@ class Parser
 
         // Убираем все гласные и забираем первые 10 символов
         return mb_strimwidth(preg_replace('#[aeiou\s]+#i', '', $directoryName), 0, 10);
+    }
+
+    public function description(): array                    //  Возвращает массив с описанием товара на двух языках
+    {
+        $description = [];
+
+//        str_replace($search, 'me-blya.com'...) Нужно для того что бы заменить названия магазина в описании на наше
+        $search = [
+            'signalua.com.ua',
+            'signal.ua.com',
+            'signal.com.ua',
+            'signalua.com',
+            'SignalUA.com.ua'
+        ];
+        $description['ru'] = str_replace($search, 'me-blya.com', trim($this->getPq()->find('.product-section__description-text')->html()));
+        $description['ua'] = str_replace($search, 'me-blya.com', trim($this->curl($this->urlProductUa())->find('.product-section__description-text')->html()));
+        if (empty($description['ua'])) {
+            $description['ua'] = $description['ru'];
+        }
+        return $description;
     }
 
     public function images(): array                         // Возвращает массив с URL фото товара
@@ -150,14 +132,53 @@ class Parser
         return $imagesCard;
     }
 
+    public function characteristics(): array                // Возвращает массив, всех характеристик с карточки товара
+    {
+        $descCard = [];
+
+        $allDescCardRu = $this->getPq()->find('.product-section__specifications-list:first')->find('.product-section__specifications-row');
+        $allDescCardUa = $this->curl($this->urlProductUa())->find('.product-section__specifications-list:first')->find('.product-section__specifications-row');
+
+
+        /**
+         * Слабое место
+         */
+        if (strpos((mb_strimwidth(trim($allDescCardUa->document->textContent), '0', '45')), 'Запитувана сторінка не знайдена!') !== false) {
+            $allDescCardUa = $allDescCardRu;
+        }
+
+
+        $index = 0;
+        foreach ($allDescCardRu as $item) {
+            $descCard[$index]['ru'] = [
+                'name' => pq($item)->find('.product-section__specifications-title')->text(),
+                'value' => pq($item)->find('.product-section__specifications-descr')->text()
+            ];
+            $index++;
+        }
+
+        $index = 0;
+        foreach ($allDescCardUa as $item) {
+            $descCard[$index]['ua'] = [
+                'name' => pq($item)->find('.product-section__specifications-title')->text(),
+                'value' => pq($item)->find('.product-section__specifications-descr')->text()
+            ];
+            $index++;
+        }
+
+        return $descCard;
+    }
+
+
     function pars()
     {
         $url = $this->getUrl();
-        $maxProductOnePage = 1; // Сколько товаров с 1-ой странцы забераем (Снизу есть товары не с нашей категории)
-        $indexProduct = 1; // Нужно для счета
+        $pq = $this->curl($url);
         $arrListCards = []; // Инициализируем переменую(Масив) для хранения карточек товара
 
-        $pq = $this->curl($url);
+        $maxProductOnePage = 18; //(18) Сколько товаров с 1-ой странцы забераем (Снизу есть товары не с нашей категории)
+        $indexProduct = 1; // Нужно для счета
+
         $lastPage = $pq->find('.catalog__products ul li');
         pq($lastPage)->find(':last')->remove();
         $lastPage = $lastPage->find(':last')->text();   //Последняя страница
@@ -197,13 +218,10 @@ class Parser
                         'vendor' => 'Signal', //  Бренд
                         'price' => ((int)preg_replace('/[^0-9]/', '', $pq->find('.product-section__price-list')->text())) + 300,
                         'currencyId' => 'UAH',
-                        'description' => [
-                            'ru' => trim($pq->find('.product-section__description-text')->html()),
-                            'ua' => trim($pq->find('.product-section__description-text')->html())
-                        ],
+                        'description' => $this->description(),
                     ],
                     'images' => $this->images(),
-                    'descList' => $this->descriptions(),
+                    'descList' => $this->characteristics(),
                 ];
 
                 if ($indexProduct == $maxProductOnePage) {
