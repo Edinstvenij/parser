@@ -138,12 +138,12 @@ class Parser
 
         $allDescCardRu = $this->getPq()->find('.product-section__specifications-list:first')->find('.product-section__specifications-row');
         $allDescCardUa = $this->curl($this->urlProductUa())->find('.product-section__specifications-list:first')->find('.product-section__specifications-row');
-
-
         /**
          * Слабое место
          */
         if (strpos((mb_strimwidth(trim($allDescCardUa->document->textContent), '0', '45')), 'Запитувана сторінка не знайдена!') !== false) {
+            $allDescCardUa = $allDescCardRu;
+        } elseif (empty($allDescCardUa)) {
             $allDescCardUa = $allDescCardRu;
         }
 
@@ -181,7 +181,7 @@ class Parser
         return $arrLinksCards;
     }
 
-    function pars() //(Если парсить все товары сразу то начала выбивать 504 ошибка)
+    function pars() //(Если парсить все товары сразу то начала выбивать 504 Gateway Time-out)
     {
         $url = $this->getUrl();
         $pq = $this->curl($url);
@@ -193,7 +193,7 @@ class Parser
         $lastPage = $pq->find('.catalog__products ul li');
         pq($lastPage)->find(':last')->remove();
         $lastPage = $lastPage->find(':last')->text();   //Последняя страница
-
+        $lastPage = 2;
 //  Переходим на следущую страницу
         for ($index = 1, $count = $lastPage; $index < $count; $index++) {
             if ($index !== 1) {
@@ -202,9 +202,18 @@ class Parser
                 $urlUpdate = $url;
             }
 
+
+            $pq = $this->curl($url);
+
+            $arrLinksCards = [];
+            $listLinks = $pq->find('.product-box__name');
+            foreach ($listLinks as $listLink) {
+                $arrLinksCards[] = pq($listLink)->attr('href');
+            }
+
 // Внутри карточки товара (Отдельный отвар)
 
-            foreach ($this->getAllUrlProductsPage($urlUpdate) as $card) {
+            foreach ($arrLinksCards as $card) {
                 $this->setUrl($card);
                 $pq = $this->setPq($card);
 
