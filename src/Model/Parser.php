@@ -202,17 +202,9 @@ class Parser
                 $urlUpdate = $url;
             }
 
-            $pq = $this->curl($urlUpdate);
-
-            $arrLinksCards = [];
-            $listLinks = $pq->find('.product-box__name');
-            foreach ($listLinks as $listLink) {
-                $arrLinksCards[] = pq($listLink)->attr('href');
-            }
-
 // Внутри карточки товара (Отдельный отвар)
 
-            foreach ($arrLinksCards as $card) {
+            foreach ($this->getAllUrlProductsPage($urlUpdate) as $card) {
                 $this->setUrl($card);
                 $pq = $this->setPq($card);
 
