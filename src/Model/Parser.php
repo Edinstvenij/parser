@@ -99,7 +99,7 @@ class Parser
         return mb_strimwidth(preg_replace('#[aeiou\s]+#i', '', $directoryName), 0, 10);
     }
 
-    public function description(): array                    //  Возвращает массив с описанием товара на двух языках
+    public function description(): array                    // (Доработать, есть ситуации возвращения только RU версии) Возвращает массив с описанием товара на двух языках
     {
         $description = [];
 
@@ -169,8 +169,19 @@ class Parser
         return $descCard;
     }
 
+    public function getAllUrlProductsPage($url): array      // Возвращает массив со всеми ссылками товаров на странице (Можно не выносить отдельно)
+    {
+        $pq = $this->curl($url);
 
-    function pars()
+        $arrLinksCards = [];
+        $listLinks = $pq->find('.product-box__name');
+        foreach ($listLinks as $listLink) {
+            $arrLinksCards[] = pq($listLink)->attr('href');
+        }
+        return $arrLinksCards;
+    }
+
+    function pars() //(Если парсить все товары сразу то начала выбивать 504 ошибка)
     {
         $url = $this->getUrl();
         $pq = $this->curl($url);
@@ -191,20 +202,9 @@ class Parser
                 $urlUpdate = $url;
             }
 
-
-// Каталог (Все товары)
-            $pq = $this->curl($urlUpdate);
-
-            $arrLinksCards = [];
-            $listLinks = $pq->find('.product-box__name');
-            foreach ($listLinks as $listLink) {
-                $arrLinksCards[] = pq($listLink)->attr('href');
-            }
-
-
 // Внутри карточки товара (Отдельный отвар)
 
-            foreach ($arrLinksCards as $card) {
+            foreach ($this->getAllUrlProductsPage($urlUpdate) as $card) {
                 $this->setUrl($card);
                 $pq = $this->setPq($card);
 
@@ -233,5 +233,4 @@ class Parser
         }
         return $arrListCards;
     }
-
 }

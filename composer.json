@@ -1,20 +1,20 @@
 {
-    "name": "test/test",
-    "autoload": {
-        "psr-4": {
-            "parser\\": "src/Model",
-            "phpquery\\": "vendor/electrolinux/phpquery/phpQuery"
-        }
-    },
-    "authors": [
-        {
-            "name": "Yura",
-            "email": "yuravigovskij@gmail.com"
-        }
-    ],
-    "require": {
-        "electrolinux/phpquery": "^0.9.6",
-        "ext-mbstring": "*",
-        "ext-curl": "*"
+  "name": "test/test",
+  "autoload": {
+    "psr-4": {
+      "parser\\": "src/Model",
+      "phpquery\\": "vendor/electrolinux/phpquery/phpQuery"
     }
+  },
+  "authors": [
+    {
+      "name": "Yura",
+      "email": "yuravigovskij@gmail.com"
+    }
+  ],
+  "require": {
+    "electrolinux/phpquery": "^0.9.6",
+    "ext-mbstring": "*",
+    "ext-curl": "*"
+  }
 }
