@@ -78,7 +78,7 @@ class Parser
 
         $productName['ua'] = trim($this->curl($this->urlProductUa())->find('h1.pagetitle')->text());
         if (empty($productName['ua'])) {
-            $productName['ua'] = trim($this->getPq()->find('h1.pagetitle')->text());
+            $productName['ua'] = &$productName['ru'];
         }
         return $productName;
     }
@@ -111,10 +111,10 @@ class Parser
             'signalua.com',
             'SignalUA.com.ua'
         ];
-        $description['ru'] = str_replace($search, 'me-blya.com', trim($this->getPq()->find('.product-section__description-text')->html()));
-        $description['ua'] = str_replace($search, 'me-blya.com', trim($this->curl($this->urlProductUa())->find('.product-section__description-text')->html()));
+        $description['ru'] = str_replace('< / p>', '', str_replace($search, 'me-blya.com', trim($this->getPq()->find('.product-section__description-text')->html())));
+        $description['ua'] = str_replace('< / p>', '', str_replace($search, 'me-blya.com', trim($this->curl($this->urlProductUa())->find('.product-section__description-text')->html())));
         if (empty($description['ua'])) {
-            $description['ua'] = $description['ru'];
+            $description['ua'] = &$description['ru'];
         }
         return $description;
     }
@@ -137,15 +137,7 @@ class Parser
         $descCard = [];
 
         $allDescCardRu = $this->getPq()->find('.product-section__specifications-list:first')->find('.product-section__specifications-row');
-        $allDescCardUa = $this->curl($this->urlProductUa())->find('.product-section__specifications-list:first')->find('.product-section__specifications-row');
-        /**
-         * Слабое место
-         */
-        if (strpos((mb_strimwidth(trim($allDescCardUa->document->textContent), '0', '45')), 'Запитувана сторінка не знайдена!') !== false) {
-            $allDescCardUa = $allDescCardRu;
-        } elseif (empty($allDescCardUa)) {
-            $allDescCardUa = $allDescCardRu;
-        }
+//        $allDescCardUa = &$allDescCardRu;   //(На потом) Украинский смещенный
 
 
         $index = 0;
@@ -156,44 +148,27 @@ class Parser
             ];
             $index++;
         }
-
-        $index = 0;
-        foreach ($allDescCardUa as $item) {
-            $descCard[$index]['ua'] = [
-                'name' => pq($item)->find('.product-section__specifications-title')->text(),
-                'value' => pq($item)->find('.product-section__specifications-descr')->text()
-            ];
-            $index++;
-        }
+//
+//        $index = 0;
+//        foreach ($allDescCardUa as $item) {
+//            $descCard[$index]['ua'] = [
+//                'name' => pq($item)->find('.product-section__specifications-title')->text(),
+//                'value' => pq($item)->find('.product-section__specifications-descr')->text()
+//            ];
+//            $index++;
+//        }
 
         return $descCard;
     }
 
-    public function getAllUrlProductsPage($url): array      // Возвращает массив со всеми ссылками товаров на странице (Можно не выносить отдельно)
-    {
-        $pq = $this->curl($url);
-
-        $arrLinksCards = [];
-        $listLinks = $pq->find('.product-box__name');
-        foreach ($listLinks as $listLink) {
-            $arrLinksCards[] = pq($listLink)->attr('href');
-        }
-        return $arrLinksCards;
-    }
-
-    function pars() //(Если парсить все товары сразу то начала выбивать 504 Gateway Time-out)
+    public function pars() //(Если парсить все товары сразу то начала выбивать 504 Gateway Time-out)
     {
         $url = $this->getUrl();
         $pq = $this->curl($url);
         $arrListCards = []; // Инициализируем переменую(Масив) для хранения карточек товара
 
-        $maxProductOnePage = 18; //(18) Сколько товаров с 1-ой странцы забераем (Снизу есть товары не с нашей категории)
-        $indexProduct = 1; // Нужно для счета
+        $lastPage = intval($pq->find('.pagination-holder ul.pagination li:nth-child(5)')->text());
 
-        $lastPage = $pq->find('.catalog__products ul li');
-        pq($lastPage)->find(':last')->remove();
-        $lastPage = $lastPage->find(':last')->text();   //Последняя страница
-        $lastPage = 2;
 //  Переходим на следущую страницу
         for ($index = 1, $count = $lastPage; $index < $count; $index++) {
             if ($index !== 1) {
@@ -202,11 +177,11 @@ class Parser
                 $urlUpdate = $url;
             }
 
-
-            $pq = $this->curl($url);
+//  (function getAllUrlProductsPage) Собираем все ссылки на товар
+            $pq = $this->curl($urlUpdate);
 
             $arrLinksCards = [];
-            $listLinks = $pq->find('.product-box__name');
+            $listLinks = $pq->find('.catalog__products-list .product-box__name');
             foreach ($listLinks as $listLink) {
                 $arrLinksCards[] = pq($listLink)->attr('href');
             }
@@ -216,28 +191,27 @@ class Parser
             foreach ($arrLinksCards as $card) {
                 $this->setUrl($card);
                 $pq = $this->setPq($card);
+                $arrayProductName = $this->productName();
+                $arrayDiscription = $this->description();
+
 
                 // Собираем инфу о товаре
                 $arrListCards[] = [
                     'mainParams' => [
                         'url' => $card,
-                        'name' => $this->productName(),
                         'categoryId' => 1208, // id Категории из XML Хорошопа
                         'vendorCode' => $this->vendorCode(),
                         'vendor' => 'Signal', //  Бренд
+                        'name' => $arrayProductName['ru'],
+                        'name_ua' => $arrayProductName['ua'],
                         'price' => ((int)preg_replace('/[^0-9]/', '', $pq->find('.product-section__price-list')->text())) + 300,
                         'currencyId' => 'UAH',
-                        'description' => $this->description(),
+                        'description' => $arrayDiscription['ru'],
+                        'description_ua' => $arrayDiscription['ua'],
                     ],
                     'images' => $this->images(),
                     'descList' => $this->characteristics(),
                 ];
-
-                if ($indexProduct == $maxProductOnePage) {
-                    $indexProduct = 1;
-                    break;
-                }
-                $indexProduct++;
             }
         }
         return $arrListCards;
