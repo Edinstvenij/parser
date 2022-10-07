@@ -170,7 +170,7 @@ class Parser
         $lastPage = intval($pq->find('.pagination-holder ul.pagination li:nth-child(5)')->text());
 
 //  Переходим на следущую страницу
-        for ($index = 1, $count = $lastPage; $index < $count; $index++) {
+        for ($index = 1, $count = $lastPage; $index <= $count; $index++) {
             if ($index !== 1) {
                 $urlUpdate = $url . '?page=' . $index;
             } else {
@@ -213,6 +213,8 @@ class Parser
                     'descList' => $this->characteristics(),
                 ];
             }
+            $jsonData = json_encode($arrListCards);
+            file_put_contents('temp/jsonData.txt', $jsonData);
         }
         return $arrListCards;
     }

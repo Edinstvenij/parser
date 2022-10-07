@@ -16,8 +16,9 @@ $signal = new Parser('https://signalua.com.ua/categories/stoly/steklyannye-stoly
 
 // Записываем все товары в файл в формате JSON
 
-$jsonData = json_encode($signal->pars());
-file_put_contents('temp/jsonData.txt', $jsonData);
+$signal->pars();
+//$jsonData = json_encode($signal->pars());
+//file_put_contents('temp/jsonData.txt', $jsonData);
 
 
 // Получаем данные из записаного файла
@@ -32,7 +33,6 @@ echo '</pre>';
 $dom = new DOMDocument('1.0', 'utf-8');
 $offers = $dom->createElement('offers');
 $dom->appendChild($offers);
-$dom->createDocumentFragment();
 foreach ($arrDataCards as $card) {
     $offer = $dom->createElement('offer');
     $dom->appendChild($offer);
