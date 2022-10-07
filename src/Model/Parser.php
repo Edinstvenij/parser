@@ -161,7 +161,7 @@ class Parser
         return $descCard;
     }
 
-    public function pars() //(Если парсить все товары сразу то начала выбивать 504 Gateway Time-out)
+    public function pars() //(Hачалo выбивать 504 Gateway Time-out)
     {
         $url = $this->getUrl();
         $pq = $this->curl($url);
@@ -170,14 +170,14 @@ class Parser
         $lastPage = intval($pq->find('.pagination-holder ul.pagination li:nth-child(5)')->text());
 
 //  Переходим на следущую страницу
-        for ($index = 1, $count = $lastPage; $index <= $count; $index++) {
+        for ($index = 1; $index <= $lastPage; $index++) {
             if ($index !== 1) {
                 $urlUpdate = $url . '?page=' . $index;
             } else {
                 $urlUpdate = $url;
             }
 
-//  (function getAllUrlProductsPage) Собираем все ссылки на товар
+            //  (function getAllUrlProductsPage) Собираем все ссылки на товар
             $pq = $this->curl($urlUpdate);
 
             $arrLinksCards = [];
@@ -186,7 +186,7 @@ class Parser
                 $arrLinksCards[] = pq($listLink)->attr('href');
             }
 
-// Внутри карточки товара (Отдельный отвар)
+            // Внутри карточки товара (Отдельный отвар)
 
             foreach ($arrLinksCards as $card) {
                 $this->setUrl($card);
@@ -213,9 +213,9 @@ class Parser
                     'descList' => $this->characteristics(),
                 ];
             }
-            $jsonData = json_encode($arrListCards);
-            file_put_contents('temp/jsonData.txt', $jsonData);
         }
-        return $arrListCards;
+        $jsonData = json_encode($arrListCards);
+        file_put_contents('temp/jsonData.txt', $jsonData);
+//        return $arrListCards;
     }
 }

@@ -1,5 +1,4 @@
 <?php
-set_time_limit(0);
 require_once 'vendor/autoload.php';
 
 use parser\Parser;
@@ -15,8 +14,7 @@ $signal = new Parser('https://signalua.com.ua/categories/stoly/steklyannye-stoly
 //echo '</pre>';
 
 // Записываем все товары в файл в формате JSON
-
-$signal->pars();
+//$signal->pars();
 //$jsonData = json_encode($signal->pars());
 //file_put_contents('temp/jsonData.txt', $jsonData);
 
@@ -33,15 +31,17 @@ echo '</pre>';
 $dom = new DOMDocument('1.0', 'utf-8');
 $offers = $dom->createElement('offers');
 $dom->appendChild($offers);
+$offers = $dom->getElementsByTagName('offers')[0];
+
 foreach ($arrDataCards as $card) {
     $offer = $dom->createElement('offer');
-    $dom->appendChild($offer);
+    $offers->appendChild($offer);
     $offer->setAttribute('id', $card['mainParams']['vendorCode']);
     $offer->setAttribute('group_id', 7458); // 7458 ID table...
     $offer->setAttribute('available', 'true');
 
     foreach ($card['mainParams'] as $key => $mainParam) {
-        $params = $dom->createElement($key, $mainParam);     //Warning: DOMDocument::createElement(): unterminated entity reference path=1_38_39&amp;product_id=16020 in /home/vagrant/code/parser/index.old.php on line 183
+        $params = $dom->createElement($key, htmlspecialchars($mainParam));
         $offer->appendChild($params);
     }
 
@@ -63,5 +63,3 @@ foreach ($arrDataCards as $card) {
     }
 }
 $dom->save('temp/offers.xml');
-
-
