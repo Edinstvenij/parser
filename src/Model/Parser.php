@@ -2,7 +2,6 @@
 
 namespace parser;
 require_once 'vendor/autoload.php';
-require_once 'vendor/electrolinux/phpquery/phpQuery/phpQuery.php';
 
 use phpQuery;
 
@@ -12,36 +11,58 @@ class Parser
     protected $pq;    // Страница (DOMDocument) phpQueryObject
 
 
-    public function __construct(string $url)    // construct  собирает класс
+    public function __construct(string $url)
     {
         $this->setUrl($url);
         $this->setPq($url);
     }
 
-
-    protected function setUrl(string $url): string          // Устанавливает и возвращает значения в переменную url
+    /**
+     * Устанавливает и возвращает значения в переменную url
+     * @param string $url
+     * @return string
+     */
+    protected function setUrl(string $url): string
     {
         return $this->url = $url;
     }
 
-    public function getUrl(): string                       //  Возвращает значения из переменной url
+    /**
+     * Возвращает значения из переменной url
+     * @return string
+     */
+    public function getUrl(): string
     {
         return $this->url;
     }
 
-    public function setPq(string $url): \phpQueryObject    // Устанавливает и возвращает значения в переменную pq
+    /**
+     * Устанавливает и возвращает значения в переменную pq
+     * @param string $url
+     * @return \phpQueryObject
+     */
+    public function setPq(string $url): \phpQueryObject
     {
         return $this->pq = $this->curl($url);
 
     }
 
-    public function getPq(): \phpQueryObject              //  Возвращает значения из переменной url
+    /**
+     * Возвращает значения из переменной url
+     * @return \phpQueryObject
+     */
+    public function getPq(): \phpQueryObject
     {
         return $this->pq;
     }
 
 
-    public function curl($url): \phpQueryObject            // Возвращает DOM документа (Переход по ссылки)
+    /**
+     * Возвращает DOM документа (Переход по ссылки)
+     * @param $url
+     * @return \phpQueryObject
+     */
+    public function curl($url): \phpQueryObject
     {
         $ch = curl_init($url);
 
@@ -53,7 +74,12 @@ class Parser
         return phpQuery::newDocument($result);
     }
 
-    public function translit(string $string): string       // Возвращает строку с латинскими символами вместо кирилици
+    /**
+     * Возвращает строку с латинскими символами вместо кирилици
+     * @param string $string
+     * @return string
+     */
+    public function translit(string $string): string
     {
         $string = (string)$string; // Преобразуем в строковое значение
         $string = trim($string); // Убираем пробелы в начале и конце строки
@@ -62,7 +88,11 @@ class Parser
         return $string; // Возвращаем результат
     }
 
-    public function urlProductUa(): string                 // Возвращает ссылку на товар с Украинской локализацией
+    /**
+     * Возвращает ссылку на товар с Украинской локализацией
+     * @return string
+     */
+    public function urlProductUa(): string
     {
         $urlProductUa = parse_url($this->getUrl());
         $urlProductUa['scheme'] .= '://';
@@ -71,7 +101,11 @@ class Parser
     }
 
 
-    public function productName(): array                   // Возвращает массив с названием товара на двух языках
+    /**
+     * Возвращает массив с названием товара на двух языках
+     * @return array
+     */
+    public function productName(): array
     {
         $productName = [];
         $productName['ru'] = trim($this->getPq()->find('h1.pagetitle')->text());
@@ -83,7 +117,11 @@ class Parser
         return $productName;
     }
 
-    public function vendorCode(): string                   // Возвращает Артикул (VendorCode)
+    /**
+     * Возвращает Артикул (VendorCode)
+     * @return string
+     */
+    public function vendorCode(): string
     {
         foreach ($this->characteristics() as $descItem) {
 
@@ -99,7 +137,11 @@ class Parser
         return mb_strimwidth(preg_replace('#[aeiou\s]+#i', '', $directoryName), 0, 10);
     }
 
-    public function description(): array                    // (Доработать, есть ситуации возвращения только RU версии) Возвращает массив с описанием товара на двух языках
+    /**
+     * (Доработать, есть ситуации возвращения только RU версии) Возвращает массив с описанием товара на двух языках
+     * @return array
+     */
+    public function description(): array
     {
         $description = [];
 
@@ -119,7 +161,11 @@ class Parser
         return $description;
     }
 
-    public function images(): array                         // Возвращает массив с URL фото товара
+    /**
+     * Возвращает массив с URL фото товара
+     * @return array
+     */
+    public function images(): array
     {
         $imagesCard = [];
         $allImagesCard = $this->getPq()->find('.fancybox');
@@ -132,7 +178,11 @@ class Parser
         return $imagesCard;
     }
 
-    public function characteristics(): array                // Возвращает массив, всех характеристик с карточки товара
+    /**
+     * Возвращает массив, всех характеристик с карточки товара
+     * @return array
+     */
+    public function characteristics(): array
     {
         $descCard = [];
 
@@ -161,7 +211,11 @@ class Parser
         return $descCard;
     }
 
-    public function pars() //(Hачалo выбивать 504 Gateway Time-out)
+    /**
+     * (Hачалo выбивать 504 Gateway Time-out)
+     * @return void
+     */
+    public function pars()
     {
         $url = $this->getUrl();
         $pq = $this->curl($url);
@@ -212,7 +266,9 @@ class Parser
                     'images' => $this->images(),
                     'descList' => $this->characteristics(),
                 ];
+                break;
             }
+            break;
         }
         $jsonData = json_encode($arrListCards);
         file_put_contents('temp/jsonData.txt', $jsonData);

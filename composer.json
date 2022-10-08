@@ -2,8 +2,7 @@
   "name": "test/test",
   "autoload": {
     "psr-4": {
-      "parser\\": "src/Model",
-      "phpquery\\": "vendor/electrolinux/phpquery/phpQuery"
+      "parser\\": "src/Model"
     }
   },
   "authors": [

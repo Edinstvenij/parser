@@ -14,7 +14,7 @@ $signal = new Parser('https://signalua.com.ua/categories/stoly/steklyannye-stoly
 //echo '</pre>';
 
 // Записываем все товары в файл в формате JSON
-//$signal->pars();
+$signal->pars();
 //$jsonData = json_encode($signal->pars());
 //file_put_contents('temp/jsonData.txt', $jsonData);
 
