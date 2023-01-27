@@ -5,26 +5,26 @@ require_once 'vendor/autoload.php';
 
 use phpQuery;
 
-class Parser
+class SignalParser
 {
     protected $url;   // Главный URL
     protected $pq;    // Страница (DOMDocument) phpQueryObject
+    protected $lastPage; // int  Ограничения по страницам
 
-
-    public function __construct(string $url)
+    public function __construct(string $url, int $lastPage = 0)
     {
         $this->setUrl($url);
         $this->setPq($url);
+        $this->lastPage = $lastPage;
     }
 
     /**
      * Устанавливает и возвращает значения в переменную url
      * @param string $url
-     * @return string
      */
-    protected function setUrl(string $url): string
+    protected function setUrl(string $url)
     {
-        return $this->url = $url;
+        $this->url = $url;
     }
 
     /**
@@ -39,12 +39,10 @@ class Parser
     /**
      * Устанавливает и возвращает значения в переменную pq
      * @param string $url
-     * @return \phpQueryObject
      */
-    public function setPq(string $url): \phpQueryObject
+    public function setPq(string $url)
     {
-        return $this->pq = $this->curl($url);
-
+        $this->pq = $this->curl($url);
     }
 
     /**
@@ -96,7 +94,7 @@ class Parser
     {
         $urlProductUa = parse_url($this->getUrl());
         $urlProductUa['scheme'] .= '://';
-        $urlProductUa['host'] .= '/ua';
+        $urlProductUa['host'] .= '/ru';
         return implode('', $urlProductUa);
     }
 
@@ -116,6 +114,21 @@ class Parser
         }
         return $productName;
     }
+
+    public function price()
+    {
+        $priceList = $this->getPq()->find('.product-section__price-list');
+        $result = [];
+
+        if (!empty(pq($priceList)->find('.product-section__new-price')->text())) {
+            $result['new'] = preg_replace('/[^0-9]/', '', pq($priceList)->find('.product-section__new-price')->text()) + 300;
+            $result['old'] = preg_replace('/[^0-9]/', '', pq($priceList)->find('.product-section__old-price')->text()) + 300;
+        } else {
+            $result['new'] = preg_replace('/[^0-9]/', '', pq($priceList)->text()) + 300;
+        }
+        return $result;
+    }
+
 
     /**
      * Возвращает Артикул (VendorCode)
@@ -146,15 +159,20 @@ class Parser
         $description = [];
 
 //        str_replace($search, 'me-blya.com'...) Нужно для того что бы заменить названия магазина в описании на наше
-        $search = [
+        $searchBrend = [
             'signalua.com.ua',
             'signal.ua.com',
             'signal.com.ua',
             'signalua.com',
             'SignalUA.com.ua'
         ];
-        $description['ru'] = str_replace('< / p>', '', str_replace($search, 'me-blya.com', trim($this->getPq()->find('.product-section__description-text')->html())));
-        $description['ua'] = str_replace('< / p>', '', str_replace($search, 'me-blya.com', trim($this->curl($this->urlProductUa())->find('.product-section__description-text')->html())));
+        $searchError = [
+            '< / p>',
+            ' < ',
+        ];
+
+        $description['ru'] = str_replace($searchError, '', str_replace($searchBrend, 'me-blya.com', trim($this->getPq()->find('.product-section__description-text')->html())));
+        $description['ua'] = str_replace($searchError, '', str_replace($searchBrend, 'me-blya.com', trim($this->curl($this->urlProductUa())->find('.product-section__description-text')->html())));
         if (empty($description['ua'])) {
             $description['ua'] = &$description['ru'];
         }
@@ -189,25 +207,20 @@ class Parser
         $allDescCardRu = $this->getPq()->find('.product-section__specifications-list:first')->find('.product-section__specifications-row');
 //        $allDescCardUa = &$allDescCardRu;   //(На потом) Украинский смещенный
 
-
         $index = 0;
         foreach ($allDescCardRu as $item) {
+
+            $value = pq($item)->find('.product-section__specifications-descr')->text();
+            if (is_float($value)) {
+                $value = round($value, 1);
+            }
+
             $descCard[$index]['ru'] = [
                 'name' => pq($item)->find('.product-section__specifications-title')->text(),
-                'value' => pq($item)->find('.product-section__specifications-descr')->text()
+                'value' => $value
             ];
             $index++;
         }
-//
-//        $index = 0;
-//        foreach ($allDescCardUa as $item) {
-//            $descCard[$index]['ua'] = [
-//                'name' => pq($item)->find('.product-section__specifications-title')->text(),
-//                'value' => pq($item)->find('.product-section__specifications-descr')->text()
-//            ];
-//            $index++;
-//        }
-
         return $descCard;
     }
 
@@ -221,7 +234,21 @@ class Parser
         $pq = $this->curl($url);
         $arrListCards = []; // Инициализируем переменую(Масив) для хранения карточек товара
 
-        $lastPage = intval($pq->find('.pagination-holder ul.pagination li:nth-child(5)')->text());
+        if ($this->lastPage) {
+            $lastPage = $this->lastPage;
+        } else {
+            $lastPage = $pq->find('.pagination-holder ul.pagination li');
+            $lastPage->find(':last')->remove();
+            $lastPage = $lastPage->find(':last')->text();
+
+
+            //  Сканируем первые 5 страниц
+            if ($lastPage > 11) {
+                $lastPage = 11;
+            } else if (empty($lastPage)) {
+                $lastPage = 1;
+            }
+        }
 
 //  Переходим на следущую страницу
         for ($index = 1; $index <= $lastPage; $index++) {
@@ -244,10 +271,10 @@ class Parser
 
             foreach ($arrLinksCards as $card) {
                 $this->setUrl($card);
-                $pq = $this->setPq($card);
+                $this->setPq($card);
                 $arrayProductName = $this->productName();
                 $arrayDiscription = $this->description();
-
+                $price = $this->price();
 
                 // Собираем инфу о товаре
                 $arrListCards[] = [
@@ -258,7 +285,8 @@ class Parser
                         'vendor' => 'Signal', //  Бренд
                         'name' => $arrayProductName['ru'],
                         'name_ua' => $arrayProductName['ua'],
-                        'price' => ((int)preg_replace('/[^0-9]/', '', $pq->find('.product-section__price-list')->text())) + 300,
+                        'price' => $price['new'],
+                        'price_old' => $price['old'] ?? 0,
                         'currencyId' => 'UAH',
                         'description' => $arrayDiscription['ru'],
                         'description_ua' => $arrayDiscription['ua'],
@@ -266,12 +294,66 @@ class Parser
                     'images' => $this->images(),
                     'descList' => $this->characteristics(),
                 ];
-                break;
             }
-            break;
         }
+
+        // Записует все в файл и сохраняет
         $jsonData = json_encode($arrListCards);
         file_put_contents('temp/jsonData.txt', $jsonData);
-//        return $arrListCards;
+    }
+
+
+    public function getDataFile(bool $print = false): array
+    {
+        $jsonData = file_get_contents('temp/jsonData.txt');
+        $arrDataCards = json_decode($jsonData, true);
+
+        if ($print === true) {
+            echo '<pre>';
+            print_r($arrDataCards);
+            echo '</pre>';
+        }
+
+        return $arrDataCards;
+    }
+
+    public function createXML()
+    {
+        $dom = new \DOMDocument('1.0', 'utf-8');
+        $offers = $dom->createElement('offers');
+        $dom->appendChild($offers);
+        $offers = $dom->getElementsByTagName('offers')[0];
+
+        foreach ($this->getDataFile() as $card) {
+            $offer = $dom->createElement('offer');
+            $offers->appendChild($offer);
+            $offer->setAttribute('id', $card['mainParams']['vendorCode']);
+            $offer->setAttribute('group_id', 157458); // 7458 ID table...
+            $offer->setAttribute('available', 'true');
+
+            foreach ($card['mainParams'] as $key => $mainParam) {
+                $params = $dom->createElement($key, htmlspecialchars($mainParam));
+                $offer->appendChild($params);
+            }
+
+            foreach ($card['images'] as $image) {
+                $params = $dom->createElement("picture", $image);
+                $offer->appendChild($params);
+            }
+
+            foreach ($card['descList'] as $descItem) {
+                $params = $dom->createElement('param', $descItem['ru']['value']);
+                $params->setAttribute('name', $descItem['ru']['name'] . ' ru');
+                $params->setAttribute('lang', 'ru');
+                $offer->appendChild($params);
+
+                $params = $dom->createElement('param', $descItem['ru']['value']);
+                $params->setAttribute('name', $descItem['ru']['name'] . ' ua');
+                $params->setAttribute('lang', 'ua');
+                $offer->appendChild($params);
+            }
+        }
+        $dom->save('temp/products.xml');
+
     }
 }
