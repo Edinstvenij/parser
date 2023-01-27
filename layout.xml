@@ -5,44 +5,40 @@
         </currencies>
         <categories>
             <category id="1072">Мебель для гостинной</category>
-            <category id="1210" parentId="1072">Cтолы</category>
-            <category id="1085" parentId="1210">Столы обеденные</category>
-            <category id="1087" parentId="1210">Столы-трансформеры</category>
-            <category id="1089" parentId="1072">Стулья мягкие</category>
+            <category id="1082" parentId="1072">Модульные гостиные</category>
+            <category id="1090" parentId="1072">ТВ-тумбы</category>
             <category id="1091" parentId="1072">Комоды</category>
+            <category id="1093" parentId="1072">Стеллажи</category>
+            <category id="1094" parentId="1072">Полки на стену</category>
+            <category id="1116" parentId="1072">Вешалки напольные</category>
+            <category id="1076">Мебель для спальни</category>
+            <category id="1054" parentId="1076">Кровати</category>
+            <category id="1145" parentId="1076">Тумбы прикроватные</category>
+            <category id="1144" parentId="1076">Трюмо, туалетные столы</category>
+            <category id="1214" parentId="1076">Сундуки</category>
             <category id="1074">Мебель для кухни</category>
             <category id="1108" parentId="1074">Столы обеденные</category>
             <category id="1110" parentId="1211">Стулья мягкие</category>
-            <category id="1075">Мебель для прихожей</category>
-            <category id="1117" parentId="1075">Комоды</category>
-            <category id="1076">Мебель для спальни</category>
-            <category id="1054" parentId="1076">Кровати</category>
-            <category id="1143" parentId="1076">Комоды</category>
-            <category id="1081">Мебель для бизнеса</category>
-            <category id="1190" parentId="1081">Мебель для кафе, бара и ресторана</category>
-            <category id="1198" parentId="1081">Офисная мебель</category>
             <category id="1077">Мягкая мебель</category>
             <category id="1153" parentId="1077">Диваны</category>
             <category id="1067" parentId="1153">Диваны прямые</category>
             <category id="1078">Столы и стулья</category>
             <category id="1208" parentId="1078">Столы</category>
+            <category id="1162" parentId="1208">Столовые комплекты</category>
             <category id="1163" parentId="1208">Столы обеденные</category>
             <category id="1165" parentId="1208">Столы-трансформеры</category>
             <category id="1173" parentId="1208">Столы деревянные</category>
+            <category id="1164" parentId="1208">Столы журнальные</category>
             <category id="1178" parentId="1078">Кресла компьютерные</category>
             <category id="1209" parentId="1078">Стулья</category>
             <category id="1167" parentId="1209">Стулья мягкие</category>
             <category id="1168" parentId="1209">Стулья металлические</category>
             <category id="1169" parentId="1209">Стулья пластиковые</category>
-            <category id="1079">Тумбы, трюмо, комоды</category>
-            <category id="1071" parentId="1079">Тумбы</category>
-            <category id="1179" parentId="1071">ТВ-тумбы</category>
-            <category id="1180" parentId="1079">Комоды</category>
             <category id="1070">Шкафы</category>
         </categories>
-<!--        <offers>-->
+        <!--        <offers>-->
 
 
-<!--        </offers>-->
+        <!--        </offers>-->
     </shop>
 </yml_catalog>
