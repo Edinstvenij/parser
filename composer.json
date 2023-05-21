@@ -2,7 +2,7 @@
   "name": "test/test",
   "autoload": {
     "psr-4": {
-      "parser\\": "src/Model"
+      "Parser\\": "src/"
     }
   },
   "authors": [
@@ -12,10 +12,12 @@
     }
   ],
   "require": {
-    "electrolinux/phpquery": 'now',
+    "electrolinux/phpquery": "0.9.6",
     "ext-mbstring": "*",
     "ext-curl": "*",
     "ext-json": "*",
-    "ext-dom": "*"
+    "ext-dom": "*",
+    "guzzlehttp/guzzle": "^7.0",
+    "vlucas/phpdotenv": "^5.5"
   }
 }

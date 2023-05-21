@@ -1,21 +1,27 @@
 <?php
 
-namespace parser;
+namespace Parser\Model;
+
 require_once 'vendor/autoload.php';
 
+use Parser\Service\Translate\TranslateMicrosoft;
 use phpQuery;
 
 class SignalParser
 {
     protected $url;   // Главный URL
     protected $pq;    // Страница (DOMDocument) phpQueryObject
-    protected $lastPage; // int  Ограничения по страницам
+    protected $lastPage; // int Ограничения по страницам
+    protected $margin; // int наценка
+    protected $translator; // object (TranslateInterface) Переводчик
 
-    public function __construct(string $url, int $lastPage = 0)
+    public function __construct(string $url, int $lastPage = 0, int $margin = 300)
     {
         $this->setUrl($url);
         $this->setPq($url);
         $this->lastPage = $lastPage;
+        $this->margin = $margin;
+        $this->translator = new TranslateMicrosoft();
     }
 
     /**
@@ -81,8 +87,47 @@ class SignalParser
     {
         $string = (string)$string; // Преобразуем в строковое значение
         $string = trim($string); // Убираем пробелы в начале и конце строки
-        $string = function_exists('mb_strtolower') ? mb_strtolower($string) : strtolower($string); // переводим строку в нижний регистр (иногда надо задать локаль)
-        $string = strtr($string, array('а' => 'a', 'б' => 'b', 'в' => 'v', 'г' => 'g', 'д' => 'd', 'е' => 'e', 'ё' => 'e', 'ж' => 'j', 'з' => 'z', 'и' => 'i', 'й' => 'y', 'к' => 'k', 'л' => 'l', 'м' => 'm', 'н' => 'n', 'о' => 'o', 'п' => 'p', 'р' => 'r', 'с' => 's', 'т' => 't', 'у' => 'u', 'ф' => 'f', 'х' => 'h', 'ц' => 'c', 'ч' => 'ch', 'ш' => 'sh', 'щ' => 'shch', 'ы' => 'y', 'э' => 'e', 'ю' => 'yu', 'я' => 'ya', 'ъ' => '', 'ь' => ''));
+        $string = function_exists('mb_strtolower') ? mb_strtolower($string) : strtolower(
+            $string
+        ); // переводим строку в нижний регистр (иногда надо задать локаль)
+        $string = strtr(
+            $string,
+            array(
+                'а' => 'a',
+                'б' => 'b',
+                'в' => 'v',
+                'г' => 'g',
+                'д' => 'd',
+                'е' => 'e',
+                'ё' => 'e',
+                'ж' => 'j',
+                'з' => 'z',
+                'и' => 'i',
+                'й' => 'y',
+                'к' => 'k',
+                'л' => 'l',
+                'м' => 'm',
+                'н' => 'n',
+                'о' => 'o',
+                'п' => 'p',
+                'р' => 'r',
+                'с' => 's',
+                'т' => 't',
+                'у' => 'u',
+                'ф' => 'f',
+                'х' => 'h',
+                'ц' => 'c',
+                'ч' => 'ch',
+                'ш' => 'sh',
+                'щ' => 'shch',
+                'ы' => 'y',
+                'э' => 'e',
+                'ю' => 'yu',
+                'я' => 'ya',
+                'ъ' => '',
+                'ь' => ''
+            )
+        );
         return $string; // Возвращаем результат
     }
 
@@ -110,7 +155,7 @@ class SignalParser
 
         $productName['ua'] = trim($this->curl($this->urlProductUa())->find('h1.pagetitle')->text());
         if (empty($productName['ua'])) {
-            $productName['ua'] = &$productName['ru'];
+            $productName['ua'] = $this->translator->translate($productName['ru']);
         }
         return $productName;
     }
@@ -121,10 +166,18 @@ class SignalParser
         $result = [];
 
         if (!empty(pq($priceList)->find('.product-section__new-price')->text())) {
-            $result['new'] = preg_replace('/[^0-9]/', '', pq($priceList)->find('.product-section__new-price')->text()) + 300;
-            $result['old'] = preg_replace('/[^0-9]/', '', pq($priceList)->find('.product-section__old-price')->text()) + 300;
+            $result['new'] = preg_replace(
+                    '/[^0-9]/',
+                    '',
+                    pq($priceList)->find('.product-section__new-price')->text()
+                ) + $this->margin;
+            $result['old'] = preg_replace(
+                    '/[^0-9]/',
+                    '',
+                    pq($priceList)->find('.product-section__old-price')->text()
+                ) + $this->margin;
         } else {
-            $result['new'] = preg_replace('/[^0-9]/', '', pq($priceList)->text()) + 300;
+            $result['new'] = preg_replace('/[^0-9]/', '', pq($priceList)->text()) + $this->margin;
         }
         return $result;
     }
@@ -137,7 +190,6 @@ class SignalParser
     public function vendorCode(): string
     {
         foreach ($this->characteristics() as $descItem) {
-
             if (in_array('Артикул', $descItem['ru'])) {
                 return $descItem['ru']['value'];
             }
@@ -171,10 +223,26 @@ class SignalParser
             ' < ',
         ];
 
-        $description['ru'] = str_replace($searchError, '', str_replace($searchBrend, 'me-blya.com', trim($this->getPq()->find('.product-section__description-text')->html())));
-        $description['ua'] = str_replace($searchError, '', str_replace($searchBrend, 'me-blya.com', trim($this->curl($this->urlProductUa())->find('.product-section__description-text')->html())));
+        $description['ru'] = str_replace(
+            $searchError,
+            '',
+            str_replace(
+                $searchBrend,
+                'me-blya.com',
+                trim($this->getPq()->find('.product-section__description-text')->html())
+            )
+        );
+        $description['ua'] = str_replace(
+            $searchError,
+            '',
+            str_replace(
+                $searchBrend,
+                'me-blya.com',
+                trim($this->curl($this->urlProductUa())->find('.product-section__description-text')->html())
+            )
+        );
         if (empty($description['ua'])) {
-            $description['ua'] = &$description['ru'];
+            $description['ua'] = $this->translator->translate($description['ru']);
         }
         return $description;
     }
@@ -204,12 +272,13 @@ class SignalParser
     {
         $descCard = [];
 
-        $allDescCardRu = $this->getPq()->find('.product-section__specifications-list:first')->find('.product-section__specifications-row');
+        $allDescCardRu = $this->getPq()->find('.product-section__specifications-list:first')->find(
+            '.product-section__specifications-row'
+        );
 //        $allDescCardUa = &$allDescCardRu;   //(На потом) Украинский смещенный
 
         $index = 0;
         foreach ($allDescCardRu as $item) {
-
             $value = pq($item)->find('.product-section__specifications-descr')->text();
             if (is_float($value)) {
                 $value = round($value, 1);
@@ -245,8 +314,10 @@ class SignalParser
             //  Сканируем первые 5 страниц
             if ($lastPage > 11) {
                 $lastPage = 11;
-            } else if (empty($lastPage)) {
-                $lastPage = 1;
+            } else {
+                if (empty($lastPage)) {
+                    $lastPage = 1;
+                }
             }
         }
 
@@ -297,7 +368,7 @@ class SignalParser
             }
         }
 
-        // Записует все в файл и сохраняет
+        // Записывает все в файл и сохраняет
         $jsonData = json_encode($arrListCards);
         file_put_contents('temp/jsonData.txt', $jsonData);
     }
@@ -354,6 +425,5 @@ class SignalParser
             }
         }
         $dom->save('temp/products.xml');
-
     }
 }

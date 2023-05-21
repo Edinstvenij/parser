@@ -1,12 +1,17 @@
 <?php
-require_once 'vendor/autoload.php';
 
-use parser\SignalParser;
+require_once './vendor/autoload.php';
 
-$signal = new SignalParser('https://signalua.com.ua/categories/myagkaya-mebel/myagkie-kresla/', 3);
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+$dotenv->load();
 
-//$signal->pars();
+use Parser\Model\SignalParser;
 
-//$signal->getDataFile(true);
 
-//$signal->createXML();
+$url = 'https://signalua.com.ua/categories/mebel-intarsio-ukraina/';
+$lastPage = 1;
+
+$signal = new SignalParser($url, $lastPage, 1000);
+$signal->pars();
+$signal->getDataFile(true);
+$signal->createXML();
